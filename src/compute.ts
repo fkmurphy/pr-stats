@@ -2,6 +2,28 @@ import type { ReviewPr, ReviewResult, SizeEntry } from './data';
 import type { SizeTarget } from './flags';
 import { durationHours } from './time';
 
+/**
+ * Holds the lowercased logins, like review bots, whose reviews on the
+ * authored PRs never count, set once from settings.json at startup.
+ */
+let ignoredReviewers = new Set<string>();
+
+/**
+ * Replaces the ignored reviewers with the given logins. The bootstrap
+ * calls it with the ignoreReviewers list from settings.json.
+ */
+export function configureIgnoredReviewers(logins: string[]): void {
+  ignoredReviewers = new Set(logins.map((login) => login.toLowerCase()));
+}
+
+/**
+ * Reports whether a review on an authored PR counts. It needs a login
+ * other than the author's that is not among the ignored reviewers.
+ */
+function countsAsReview(login: string | null, author: string): login is string {
+  return login !== null && login !== author && !ignoredReviewers.has(login.toLowerCase());
+}
+
 export interface ReviewedEntry {
   pr: ReviewPr;
   requestedAt: Date;
@@ -445,9 +467,7 @@ export function computeReviewerStats(sizes: SizeEntry[], author: string): Review
   let mergedUnreviewed = 0;
 
   for (const entry of sizes) {
-    const others = entry.reviews.flatMap((review) =>
-      review.login === null || review.login === author ? [] : [review.login],
-    );
+    const others = entry.reviews.flatMap((review) => (countsAsReview(review.login, author) ? [review.login] : []));
 
     for (const login of others) {
       const counts = byLogin.get(login) ?? { prs: 0, reviews: 0 };
@@ -534,7 +554,7 @@ export function firstReviewOf(entry: SizeEntry, author: string): { reviewedAt: D
   let earliest: Date | null = null;
 
   for (const review of entry.reviews) {
-    if (review.login === null || review.login === author || review.submittedAt === null) {
+    if (!countsAsReview(review.login, author) || review.submittedAt === null) {
       continue;
     }
 

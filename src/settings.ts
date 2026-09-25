@@ -125,6 +125,12 @@ export interface Settings {
    */
   teamReviewStats?: boolean;
   /**
+   * Names the logins, like review bots, whose reviews on your PRs never
+   * count toward the first review, the reviewer leaderboard, or the
+   * merged-with-review split. The match ignores case, like GitHub logins.
+   */
+  ignoreReviewers?: string[];
+  /**
    * Picks the channel the notifications go through. With auto the
    * TUI asks the terminal to post them and falls back to the platform
    * command, terminal forces the terminal path, command forces the
@@ -304,6 +310,14 @@ export function loadSettings(): Settings {
 
   if (settings.teamReviewStats !== undefined && typeof settings.teamReviewStats !== 'boolean') {
     throw new CliError(`"teamReviewStats" in ${settingsFile()} must be true or false`);
+  }
+
+  if (
+    settings.ignoreReviewers !== undefined &&
+    (!Array.isArray(settings.ignoreReviewers) ||
+      !settings.ignoreReviewers.every((login: unknown) => typeof login === 'string' && login.trim() !== ''))
+  ) {
+    throw new CliError(`"ignoreReviewers" in ${settingsFile()} must be a list of logins like ["review-bot"]`);
   }
 
   if (settings.notifyChannel !== undefined && !NOTIFY_CHANNELS.includes(settings.notifyChannel)) {

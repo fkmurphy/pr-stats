@@ -1,4 +1,5 @@
 import { configureCache } from '../cache';
+import { configureIgnoredReviewers } from '../compute';
 import { canonicalWorkDays, HELP, parseCliArgs } from '../flags';
 import { configureAuth } from '../github';
 import { readMentionReads, type MentionReadsByUser } from '../mentions';
@@ -143,6 +144,8 @@ export function bootstrap(): BootstrapResult {
     // both merges need the configured cache, so they run after configureCache
     const settings = applySettings(values, explicit);
     const saved = applySavedOptions(values, explicit);
+
+    configureIgnoredReviewers(settings.ignoreReviewers ?? []);
 
     const theme = applyTheme(settings.theme);
 

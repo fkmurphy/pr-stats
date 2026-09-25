@@ -432,6 +432,18 @@ test('rejects a settings file that is malformed or holds the wrong types', () =>
 
   expect(loadSettings().openIn).toBe('linear');
 
+  writeSettingsFile({ ignoreReviewers: 'review-bot' });
+
+  expect(() => loadSettings()).toThrow('"ignoreReviewers"');
+
+  writeSettingsFile({ ignoreReviewers: ['review-bot', ''] });
+
+  expect(() => loadSettings()).toThrow('"ignoreReviewers"');
+
+  writeSettingsFile({ ignoreReviewers: ['review-bot'] });
+
+  expect(loadSettings().ignoreReviewers).toEqual(['review-bot']);
+
   writeSettingsFile({ autoReload: 'yes' });
 
   expect(() => loadSettings()).toThrow(CliError);
