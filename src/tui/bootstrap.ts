@@ -145,7 +145,7 @@ export function bootstrap(): BootstrapResult {
     const settings = applySettings(values, explicit);
     const saved = applySavedOptions(values, explicit);
 
-    configureIgnoredReviewers(settings.ignoreReviewers ?? []);
+    configureIgnoredReviewers(settings.ignoreReviewers ?? [], settings.ignoreBotReviews === true);
 
     const theme = applyTheme(settings.theme);
 

@@ -348,3 +348,30 @@ test('ignored reviewers stay out of the leaderboard, the merge coverage, and the
     configureIgnoredReviewers([]);
   }
 });
+
+test('bot accounts stay out of the leaderboard and the first review only while ignoreBotReviews is on', () => {
+  const mergedAt = new Date('2026-07-02T00:00:00Z');
+
+  const botReview = { login: 'review-bot', isBot: true, submittedAt: new Date('2026-07-01T00:10:00Z') };
+  const humanReview = { login: 'alice', isBot: false, submittedAt: new Date('2026-07-01T06:00:00Z') };
+  const botOnlyMerge = { ...entry(1, 0, 0, []), mergedAt, reviews: [botReview] };
+  const reviewedMerge = { ...entry(2, 0, 0, []), mergedAt, reviews: [botReview, humanReview] };
+
+  expect(computeReviewerStats([botOnlyMerge, reviewedMerge], 'me').mergedUnreviewed).toBe(0);
+
+  configureIgnoredReviewers([], true);
+
+  try {
+    const reviewers = computeReviewerStats([botOnlyMerge, reviewedMerge], 'me');
+
+    expect(reviewers.leaderboard).toEqual([{ login: 'alice', prs: 1, reviews: 1 }]);
+    expect(reviewers.mergedReviewed).toBe(1);
+    expect(reviewers.mergedUnreviewed).toBe(1);
+
+    const firstReview = computeFirstReviewStats([reviewedEntry(3, [botReview, humanReview])], 'me');
+
+    expect(firstReview.received[0].reviewedAt).toEqual(new Date('2026-07-01T06:00:00Z'));
+  } finally {
+    configureIgnoredReviewers([]);
+  }
+});

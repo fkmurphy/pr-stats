@@ -1,4 +1,4 @@
-import type { ReviewPr, ReviewResult, SizeEntry } from './data';
+import type { PrReview, ReviewPr, ReviewResult, SizeEntry } from './data';
 import type { SizeTarget } from './flags';
 import { durationHours } from './time';
 
@@ -8,20 +8,37 @@ import { durationHours } from './time';
  */
 let ignoredReviewers = new Set<string>();
 
+let ignoreBotReviews = false;
+
 /**
- * Replaces the ignored reviewers with the given logins. The bootstrap
- * calls it with the ignoreReviewers list from settings.json.
+ * Replaces the ignored reviewers with the given logins and sets whether
+ * every Bot account is ignored too. The bootstrap calls it with the
+ * ignoreReviewers and ignoreBotReviews values from settings.json.
  */
-export function configureIgnoredReviewers(logins: string[]): void {
+export function configureIgnoredReviewers(logins: string[], ignoreBots = false): void {
   ignoredReviewers = new Set(logins.map((login) => login.toLowerCase()));
+  ignoreBotReviews = ignoreBots;
+}
+
+/**
+ * Reports whether the reviews of Bot accounts are being ignored.
+ */
+export function ignoresBotReviews(): boolean {
+  return ignoreBotReviews;
 }
 
 /**
  * Reports whether a review on an authored PR counts. It needs a login
- * other than the author's that is not among the ignored reviewers.
+ * other than the author's that is not among the ignored reviewers and,
+ * while bot reviews are ignored, does not belong to a Bot account.
  */
-function countsAsReview(login: string | null, author: string): login is string {
-  return login !== null && login !== author && !ignoredReviewers.has(login.toLowerCase());
+function countsAsReview(review: PrReview, author: string): review is PrReview & { login: string } {
+  return (
+    review.login !== null &&
+    review.login !== author &&
+    !ignoredReviewers.has(review.login.toLowerCase()) &&
+    !(ignoreBotReviews && review.isBot)
+  );
 }
 
 export interface ReviewedEntry {
@@ -467,7 +484,7 @@ export function computeReviewerStats(sizes: SizeEntry[], author: string): Review
   let mergedUnreviewed = 0;
 
   for (const entry of sizes) {
-    const others = entry.reviews.flatMap((review) => (countsAsReview(review.login, author) ? [review.login] : []));
+    const others = entry.reviews.flatMap((review) => (countsAsReview(review, author) ? [review.login] : []));
 
     for (const login of others) {
       const counts = byLogin.get(login) ?? { prs: 0, reviews: 0 };
@@ -554,7 +571,7 @@ export function firstReviewOf(entry: SizeEntry, author: string): { reviewedAt: D
   let earliest: Date | null = null;
 
   for (const review of entry.reviews) {
-    if (!countsAsReview(review.login, author) || review.submittedAt === null) {
+    if (!countsAsReview(review, author) || review.submittedAt === null) {
       continue;
     }
 

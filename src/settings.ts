@@ -131,6 +131,12 @@ export interface Settings {
    */
   ignoreReviewers?: string[];
   /**
+   * Leaves out the reviews of every account GitHub types as a Bot, so
+   * review bots need no naming in ignoreReviewers. It starts off, and
+   * the first load with it on refetches the cached closed PRs once.
+   */
+  ignoreBotReviews?: boolean;
+  /**
    * Picks the channel the notifications go through. With auto the
    * TUI asks the terminal to post them and falls back to the platform
    * command, terminal forces the terminal path, command forces the
@@ -318,6 +324,10 @@ export function loadSettings(): Settings {
       !settings.ignoreReviewers.every((login: unknown) => typeof login === 'string' && login.trim() !== ''))
   ) {
     throw new CliError(`"ignoreReviewers" in ${settingsFile()} must be a list of logins like ["review-bot"]`);
+  }
+
+  if (settings.ignoreBotReviews !== undefined && typeof settings.ignoreBotReviews !== 'boolean') {
+    throw new CliError(`"ignoreBotReviews" in ${settingsFile()} must be true or false`);
   }
 
   if (settings.notifyChannel !== undefined && !NOTIFY_CHANNELS.includes(settings.notifyChannel)) {

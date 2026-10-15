@@ -191,6 +191,14 @@ Review bots answer within minutes, so a bot that reviews every PR makes the time
 }
 ```
 
+The `ignoreBotReviews` setting does the same for every account GitHub types as a Bot, so review apps need no naming. It starts off, and the list stays for bots that run on a regular user account. The first load with it on fetches the cached closed PRs again once, because the cache did not record the account type before.
+
+```json
+{
+  "ignoreBotReviews": true
+}
+```
+
 ## Snoozing
 
 A PR you commented on without leaving a review stays in the awaiting list, because GitHub still counts the review as requested. When you are waiting on the author, the `s` key snoozes the highlighted PR. A small dialog asks how long, starting from the default snooze duration, and takes a value in minutes, hours, days, or weeks like `30m`, `2h`, `1d`, or `1w`, up to four weeks. The PR then moves into a Snoozed list below the awaiting one, where its row shows the wake-up time instead of the wait, and the repo picker counts the snoozed PRs apart from the awaiting ones. Pressing `s` on a snoozed PR ends the snooze right away. The same key snoozes an unread mention on the Mentions sub-tab, which parks it in a Snoozed list between the Unread and the Read lists, and `d` on a snoozed mention marks it read and ends the snooze in one step.

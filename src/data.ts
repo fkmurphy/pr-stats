@@ -1,4 +1,5 @@
 import { PrCache, prKey, readCachedLogin, readCachedTeams, writeCachedLogin, writeCachedTeams } from './cache';
+import { ignoresBotReviews } from './compute';
 import {
   authFingerprint,
   fetchCurrentUser,
@@ -87,6 +88,11 @@ export interface PrReview {
    * Holds the reviewer's login, or null when the account was deleted.
    */
   login: string | null;
+  /**
+   * Tells whether GitHub typed the reviewer's account as a Bot, which
+   * is false or absent for a deleted account and for a bot on a regular user.
+   */
+  isBot?: boolean;
   /**
    * Holds when the review was submitted, or null for a pending review
    * that exists but was never submitted.
@@ -539,6 +545,18 @@ function lacksReviewRequests(details: PrDetails): boolean {
 }
 
 /**
+ * Reports whether a cached size entry predates the author type on its
+ * reviews. It only matters while bot reviews are ignored, so an entry
+ * counts as a miss then and refetches once, and nobody else pays for it.
+ */
+function lacksReviewerTypes(size: PrSize): boolean {
+  return (
+    ignoresBotReviews() &&
+    size.reviews.nodes.some((node) => node?.author != null && node.author.__typename === undefined)
+  );
+}
+
+/**
  * Fetches the review timeline for every PR and classifies each one into
  * its request cycles, so the result list can be longer than the PR list.
  * Closed PRs come from the on-disk cache when possible, and freshly
@@ -612,7 +630,7 @@ export async function fetchSizeRaw(
   options: FetchOptions = {},
 ): Promise<SizeFetch> {
   const cache = new PrCache<PrSize>('sizes');
-  const { found, misses } = partitionCached(prs, cache, options.bypassCache === true);
+  const { found, misses } = partitionCached(prs, cache, options.bypassCache === true, lacksReviewerTypes);
   const cacheHits = prs.length - misses.length;
 
   onProgress?.(cacheHits, prs.length);
@@ -638,6 +656,7 @@ export async function fetchSizeRaw(
           : [
               {
                 login: node.author?.login ?? null,
+                isBot: node.author?.__typename === 'Bot',
                 submittedAt: node.submittedAt === null ? null : new Date(node.submittedAt),
               },
             ],

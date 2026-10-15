@@ -299,7 +299,7 @@ export interface PrSize {
   comments: { totalCount: number };
   reviews: {
     nodes: ({
-      author: { login: string } | null;
+      author: { login: string; __typename?: string } | null;
       submittedAt: string | null;
       comments: { totalCount: number };
     } | null)[];
@@ -1008,7 +1008,7 @@ export async function fetchPrSizes(prs: PrRef[]): Promise<(PrSize | null)[]> {
           }
           reviews(first: 100) {
             nodes {
-              author { login }
+              author { login __typename }
               submittedAt
               comments {
                 totalCount
